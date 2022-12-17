@@ -1,9 +1,11 @@
 ansible_user: root
 ansible_password: 123
-ansible_port: 2222
+ansible_port: 22
 
 new_user: user
-new_password: "1234"
+new_password: "123"
+
+new_root_password: "123"
 
 container_name: vpn
 

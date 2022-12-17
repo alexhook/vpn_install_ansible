@@ -20,7 +20,7 @@
     - name: Add docker gpg key
       apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
-        keyring: /etc/apt/keyrings/docker.gpg
+        keyring: /etc/apt/trusted.gpg.d/docker.gpg
         state: present
 
     - name: Gathering necessary variables (deb_architecture)
@@ -34,7 +34,7 @@
     - name: Add docker repository
       apt_repository:
         repo: >
-          deb [arch={{ deb_architecture.stdout }} signed-by=/etc/apt/keyrings/docker.gpg]
+          deb [arch={{ deb_architecture.stdout }} signed-by=/etc/apt/trusted.gpg.d/docker.gpg]
           https://download.docker.com/linux/ubuntu {{ lsb_release.stdout }} stable
         state: present
         filename: docker
@@ -73,6 +73,7 @@
         restart_policy: always
         privileged: yes
         ports:
+          - "500:500/udp"
           - "4500:4500/udp"
         volumes:
           - ikev2-vpn-data:/etc/ipsec.d
@@ -87,21 +88,33 @@
 
     - name: Retrieve config files from docker container (p12)
       shell: docker cp {{ container_name }}:/etc/ipsec.d/{{ p12_file }} {{ tmp_vpn_confs_dir }}
+      register: result
+      retries: 5
+      delay: 10
+      until: result.rc == 0
+      ignore_errors: yes
 
     - name: Retrieve config files from docker container (sswan)
       shell: docker cp {{ container_name }}:/etc/ipsec.d/{{ sswan_file }} {{ tmp_vpn_confs_dir }}
+      register: result
+      retries: 5
+      delay: 10
+      until: result.rc == 0
+      ignore_errors: yes
 
     - name: Copy vpn config files to local machine (p12)
       fetch:
         src: "{{ tmp_vpn_confs_dir }}/{{ p12_file }}"
         dest: "./{{ p12_file }}"
         flat: yes
+      ignore_errors: yes
 
     - name: Copy vpn config files to local machine (sswan)
       fetch:
         src: "{{ tmp_vpn_confs_dir }}/{{ sswan_file }}"
         dest: "./{{ sswan_file }}"
         flat: yes
+      ignore_errors: yes
 
     - name: Remove temporary directory for vpn config files
       file:
@@ -121,6 +134,11 @@
         groups: sudo, docker
         append: yes
         shell: /bin/bash
+
+    - name: Change root password
+      user:
+        name: root
+        password: "{{ new_root_password | password_hash('sha512') }}"
 
     - name: Reboot machine
       reboot:
