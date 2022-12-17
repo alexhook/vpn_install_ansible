@@ -1,0 +1,15 @@
+ansible_user: root
+ansible_password: 123
+ansible_port: 2222
+
+new_user: user
+new_password: "1234"
+
+container_name: vpn
+
+p12_file: vpnclient.p12
+sswan_file: vpnclient.sswan
+tmp_vpn_confs_dir: /tmp/vpn_confs
+
+sshd_config_local_path: ./configs/sshd_config
+sshd_config_remote_path: /etc/ssh/sshd_config
