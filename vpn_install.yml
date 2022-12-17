@@ -8,6 +8,11 @@
         upgrade: dist
         update_cache: yes
 
+    - name: Install pip
+      apt:
+        name: python3-pip
+        update_cache: yes
+
     - name: Install docker requirements
       apt:
         name:
