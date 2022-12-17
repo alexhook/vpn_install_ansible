@@ -3,6 +3,9 @@
   hosts: all
   vars_files: vars.yml
   tasks:
+    - name: Configure dpkg service
+      command: dpkg --configure -a
+
     - name: Update all packages to the latest version
       apt:
         upgrade: dist
@@ -12,6 +15,10 @@
       apt:
         name: python3-pip
         update_cache: yes
+
+    - name: Install python requests module
+      pip:
+        name: requests
 
     - name: Install docker requirements
       apt:
