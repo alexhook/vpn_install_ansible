@@ -77,6 +77,26 @@
           enabled: yes
           state: started
 
+    - name: Install proxy
+      when: proxy
+      block:
+      - name: Pull proxy docker image
+        community.docker.docker_image:
+          name: adegtyarev/dante
+          source: pull
+
+      - name: Run proxy docker container
+        community.docker.docker_container:
+          name: "{{ proxy_container_name }}"
+          image: adegtyarev/dante
+          restart_policy: always
+          privileged: yes
+          ports:
+            - "{{ sockd_port }}:1080"
+          env:
+            SOCKD_USER_NAME: "{{ sockd_user }}"
+            SOCKD_USER_PASSWORD: "{{ sockd_password }}"
+
     - name: Install VPN
       when: vpn
       block:
@@ -85,9 +105,9 @@
           name: hwdsl2/ipsec-vpn-server
           source: pull
 
-      - name: Run docker container
+      - name: Run vpn docker container
         community.docker.docker_container:
-          name: "{{ container_name }}"
+          name: "{{ vpn_container_name }}"
           image: hwdsl2/ipsec-vpn-server
           restart_policy: always
           privileged: yes
@@ -106,7 +126,7 @@
           state: directory
 
       - name: Retrieve config files from docker container (p12)
-        shell: docker cp {{ container_name }}:/etc/ipsec.d/{{ p12_file }} {{ tmp_vpn_confs_dir }}
+        shell: docker cp {{ vpn_container_name }}:/etc/ipsec.d/{{ p12_file }} {{ tmp_vpn_confs_dir }}
         register: result
         retries: 5
         delay: 10
@@ -114,7 +134,7 @@
         ignore_errors: yes
 
       - name: Retrieve config files from docker container (sswan)
-        shell: docker cp {{ container_name }}:/etc/ipsec.d/{{ sswan_file }} {{ tmp_vpn_confs_dir }}
+        shell: docker cp {{ vpn_container_name }}:/etc/ipsec.d/{{ sswan_file }} {{ tmp_vpn_confs_dir }}
         register: result
         retries: 5
         delay: 10
