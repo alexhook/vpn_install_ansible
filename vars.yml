@@ -2,6 +2,9 @@ ansible_user: root
 ansible_password: 123
 ansible_port: 22
 
+vpn: yes
+proxy: yes
+
 new_user: user
 new_password: "123"
 

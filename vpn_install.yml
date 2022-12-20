@@ -3,156 +3,167 @@
   hosts: all
   vars_files: vars.yml
   tasks:
-    - name: Configure dpkg service
-      command: dpkg --configure -a
+    - name: Initial installations
+      block:
+      - name: Configure dpkg service
+        command: dpkg --configure -a
 
-    - name: Update all packages to the latest version
-      apt:
-        upgrade: dist
-        update_cache: yes
+      - name: Update all packages to the latest version
+        apt:
+          upgrade: dist
+          update_cache: yes
 
-    - name: Install pip
-      apt:
-        name: python3-pip
-        update_cache: yes
+      - name: Install pip
+        apt:
+          name: python3-pip
+          update_cache: yes
 
-    - name: Install python requests module
-      pip:
-        name: requests
+      - name: Install python requests module
+        pip:
+          name: requests
 
-    - name: Install docker requirements
-      apt:
-        name:
-        - ca-certificates
-        - curl
-        - gnupg
-        - lsb-release
-        update_cache: yes
+    - name: Install Docker
+      block:
+      - name: Install docker requirements
+        apt:
+          name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+          update_cache: yes
 
-    - name: Add docker gpg key
-      apt_key:
-        url: https://download.docker.com/linux/ubuntu/gpg
-        keyring: /etc/apt/trusted.gpg.d/docker.gpg
-        state: present
+      - name: Add docker gpg key
+        apt_key:
+          url: https://download.docker.com/linux/ubuntu/gpg
+          keyring: /etc/apt/trusted.gpg.d/docker.gpg
+          state: present
 
-    - name: Gathering necessary variables (deb_architecture)
-      shell: dpkg --print-architecture
-      register: deb_architecture
+      - name: Gathering necessary variables (deb_architecture)
+        shell: dpkg --print-architecture
+        register: deb_architecture
 
-    - name: Gathering necessary variables (lsb_release)
-      shell: lsb_release -cs
-      register: lsb_release
+      - name: Gathering necessary variables (lsb_release)
+        shell: lsb_release -cs
+        register: lsb_release
 
-    - name: Add docker repository
-      apt_repository:
-        repo: >
-          deb [arch={{ deb_architecture.stdout }} signed-by=/etc/apt/trusted.gpg.d/docker.gpg]
-          https://download.docker.com/linux/ubuntu {{ lsb_release.stdout }} stable
-        state: present
-        filename: docker
-        update_cache: yes
+      - name: Add docker repository
+        apt_repository:
+          repo: >
+            deb [arch={{ deb_architecture.stdout }} signed-by=/etc/apt/trusted.gpg.d/docker.gpg]
+            https://download.docker.com/linux/ubuntu {{ lsb_release.stdout }} stable
+          state: present
+          filename: docker
+          update_cache: yes
 
-    - name: Install docker components
-      apt:
-        name:
-          - docker-ce
-          - docker-ce-cli
-          - containerd.io
-          - docker-compose-plugin
-        update_cache: yes
+      - name: Install docker components
+        apt:
+          name:
+            - docker-ce
+            - docker-ce-cli
+            - containerd.io
+            - docker-compose-plugin
+          update_cache: yes
 
-    - name: Enable docker service start on boot
-      service:
-        name: docker
-        enabled: yes
-        state: started
+      - name: Enable docker service start on boot
+        service:
+          name: docker
+          enabled: yes
+          state: started
 
-    - name: Enable containerd service start on boot
-      service:
-        name: containerd
-        enabled: yes
-        state: started
+      - name: Enable containerd service start on boot
+        service:
+          name: containerd
+          enabled: yes
+          state: started
 
-    - name: Pull VPN docker image
-      community.docker.docker_image:
-        name: hwdsl2/ipsec-vpn-server
-        source: pull
+    - name: Install VPN
+      when: vpn
+      block:
+      - name: Pull VPN docker image
+        community.docker.docker_image:
+          name: hwdsl2/ipsec-vpn-server
+          source: pull
 
-    - name: Run docker container
-      community.docker.docker_container:
-        name: "{{ container_name }}"
-        image: hwdsl2/ipsec-vpn-server
-        restart_policy: always
-        privileged: yes
-        ports:
-          - "500:500/udp"
-          - "4500:4500/udp"
-        volumes:
-          - ikev2-vpn-data:/etc/ipsec.d
-          - /lib/modules:/lib/modules:ro
-        env:
-          VPN_IKEV2_ONLY: "yes"
+      - name: Run docker container
+        community.docker.docker_container:
+          name: "{{ container_name }}"
+          image: hwdsl2/ipsec-vpn-server
+          restart_policy: always
+          privileged: yes
+          ports:
+            - "500:500/udp"
+            - "4500:4500/udp"
+          volumes:
+            - ikev2-vpn-data:/etc/ipsec.d
+            - /lib/modules:/lib/modules:ro
+          env:
+            VPN_IKEV2_ONLY: "yes"
 
-    - name: Make temporary directory for vpn config files
-      file:
-        path: "{{ tmp_vpn_confs_dir }}"
-        state: directory
+      - name: Make temporary directory for vpn config files
+        file:
+          path: "{{ tmp_vpn_confs_dir }}"
+          state: directory
 
-    - name: Retrieve config files from docker container (p12)
-      shell: docker cp {{ container_name }}:/etc/ipsec.d/{{ p12_file }} {{ tmp_vpn_confs_dir }}
-      register: result
-      retries: 5
-      delay: 10
-      until: result.rc == 0
-      ignore_errors: yes
+      - name: Retrieve config files from docker container (p12)
+        shell: docker cp {{ container_name }}:/etc/ipsec.d/{{ p12_file }} {{ tmp_vpn_confs_dir }}
+        register: result
+        retries: 5
+        delay: 10
+        until: result.rc == 0
+        ignore_errors: yes
 
-    - name: Retrieve config files from docker container (sswan)
-      shell: docker cp {{ container_name }}:/etc/ipsec.d/{{ sswan_file }} {{ tmp_vpn_confs_dir }}
-      register: result
-      retries: 5
-      delay: 10
-      until: result.rc == 0
-      ignore_errors: yes
+      - name: Retrieve config files from docker container (sswan)
+        shell: docker cp {{ container_name }}:/etc/ipsec.d/{{ sswan_file }} {{ tmp_vpn_confs_dir }}
+        register: result
+        retries: 5
+        delay: 10
+        until: result.rc == 0
+        ignore_errors: yes
 
-    - name: Copy vpn config files to local machine (p12)
-      fetch:
-        src: "{{ tmp_vpn_confs_dir }}/{{ p12_file }}"
-        dest: "./{{ p12_file }}"
-        flat: yes
-      ignore_errors: yes
+      - name: Copy vpn config files to local machine (p12)
+        fetch:
+          src: "{{ tmp_vpn_confs_dir }}/{{ p12_file }}"
+          dest: "./{{ p12_file }}"
+          flat: yes
+        ignore_errors: yes
 
-    - name: Copy vpn config files to local machine (sswan)
-      fetch:
-        src: "{{ tmp_vpn_confs_dir }}/{{ sswan_file }}"
-        dest: "./{{ sswan_file }}"
-        flat: yes
-      ignore_errors: yes
+      - name: Copy vpn config files to local machine (sswan)
+        fetch:
+          src: "{{ tmp_vpn_confs_dir }}/{{ sswan_file }}"
+          dest: "./{{ sswan_file }}"
+          flat: yes
+        ignore_errors: yes
 
-    - name: Remove temporary directory for vpn config files
-      file:
-        path: "{{ tmp_vpn_confs_dir }}"
-        state: absent
+      - name: Remove temporary directory for vpn config files
+        file:
+          path: "{{ tmp_vpn_confs_dir }}"
+          state: absent
 
-    - name: Copy sshd config file to remote machine
-      copy:
-        src: "{{ sshd_config_local_path }}"
-        dest: "{{ sshd_config_remote_path }}"
+    - name: Users configuration
+      block:
+      - name: Create new user
+        user:
+          name: "{{ new_user }}"
+          password: "{{ new_password | password_hash('sha512') }}"
+          create_home: yes
+          groups: sudo, docker
+          append: yes
+          shell: /bin/bash
 
-    - name: Create new user
-      user:
-        name: "{{ new_user }}"
-        password: "{{ new_password | password_hash('sha512') }}"
-        create_home: yes
-        groups: sudo, docker
-        append: yes
-        shell: /bin/bash
+      - name: Change root password
+        user:
+          name: root
+          password: "{{ new_root_password | password_hash('sha512') }}"
 
-    - name: Change root password
-      user:
-        name: root
-        password: "{{ new_root_password | password_hash('sha512') }}"
+    - name: Final steps
+      block:
+      - name: Copy sshd config file to remote machine
+        copy:
+          src: "{{ sshd_config_local_path }}"
+          dest: "{{ sshd_config_remote_path }}"
 
-    - name: Reboot machine
-      reboot:
-        reboot_timeout: 0
-      ignore_errors: yes
+      - name: Reboot machine
+        reboot:
+          reboot_timeout: 0
+        ignore_errors: yes
