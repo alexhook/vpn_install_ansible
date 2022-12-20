@@ -14,7 +14,6 @@ sshd_config_remote_path: /etc/ssh/sshd_config
 
 # Installation services
 vpn: yes
-proxy: yes
 
 # VPN configurations
 vpn_container_name: vpn

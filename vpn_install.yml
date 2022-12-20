@@ -77,26 +77,6 @@
           enabled: yes
           state: started
 
-    - name: Install proxy
-      when: proxy
-      block:
-      - name: Pull proxy docker image
-        community.docker.docker_image:
-          name: adegtyarev/dante
-          source: pull
-
-      - name: Run proxy docker container
-        community.docker.docker_container:
-          name: "{{ proxy_container_name }}"
-          image: adegtyarev/dante
-          restart_policy: always
-          privileged: yes
-          ports:
-            - "{{ sockd_port }}:1080"
-          env:
-            SOCKD_USER_NAME: "{{ sockd_user }}"
-            SOCKD_USER_PASSWORD: "{{ sockd_password }}"
-
     - name: Install VPN
       when: vpn
       block:
