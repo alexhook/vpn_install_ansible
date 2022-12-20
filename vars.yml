@@ -20,9 +20,3 @@ vpn_container_name: vpn
 p12_file: vpnclient.p12
 sswan_file: vpnclient.sswan
 tmp_vpn_confs_dir: /tmp/vpn_confs
-
-# Proxy configurations
-proxy_container_name: proxy
-sockd_port: 1080
-sockd_user: user
-sockd_password: "123"
