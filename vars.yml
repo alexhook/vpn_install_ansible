@@ -19,4 +19,5 @@ vpn: yes
 vpn_container_name: vpn
 p12_file: vpnclient.p12
 sswan_file: vpnclient.sswan
+mobileconfig_file: vpnclient.mobileconfig
 tmp_vpn_confs_dir: /tmp/vpn_confs

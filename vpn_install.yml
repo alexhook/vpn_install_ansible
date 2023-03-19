@@ -121,6 +121,14 @@
         until: result.rc == 0
         ignore_errors: yes
 
+      - name: Retrieve config files from docker container (mobileconfig)
+        shell: docker cp {{ vpn_container_name }}:/etc/ipsec.d/{{ mobileconfig_file }} {{ tmp_vpn_confs_dir }}
+        register: result
+        retries: 5
+        delay: 10
+        until: result.rc == 0
+        ignore_errors: yes
+
       - name: Copy vpn config files to local machine (p12)
         fetch:
           src: "{{ tmp_vpn_confs_dir }}/{{ p12_file }}"
@@ -132,6 +140,13 @@
         fetch:
           src: "{{ tmp_vpn_confs_dir }}/{{ sswan_file }}"
           dest: "./{{ sswan_file }}"
+          flat: yes
+        ignore_errors: yes
+
+      - name: Copy vpn config files to local machine (mobileconfig)
+        fetch:
+          src: "{{ tmp_vpn_confs_dir }}/{{ mobileconfig_file }}"
+          dest: "./{{ mobileconfig_file }}"
           flat: yes
         ignore_errors: yes
 
