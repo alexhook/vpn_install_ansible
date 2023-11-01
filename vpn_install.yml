@@ -1,7 +1,6 @@
 ---
 - name: vpn_install
   hosts: all
-  vars_files: vars.yml
   tasks:
     - name: Initial installations
       block:
@@ -18,9 +17,12 @@
           name: python3-pip
           update_cache: yes
 
-      - name: Install python requests module
+      - name: Install python dependencies
         pip:
-          name: requests
+          name:
+            - urllib3<2.0.0
+            - requests
+            - docker
 
     - name: Install Docker
       block:
@@ -133,21 +135,21 @@
         fetch:
           src: "{{ tmp_vpn_confs_dir }}/{{ p12_file }}"
           dest: "./{{ p12_file }}"
-          flat: yes
+          flat: "{{ flat_retrieve_files }}"
         ignore_errors: yes
 
       - name: Copy vpn config files to local machine (sswan)
         fetch:
           src: "{{ tmp_vpn_confs_dir }}/{{ sswan_file }}"
           dest: "./{{ sswan_file }}"
-          flat: yes
+          flat: "{{ flat_retrieve_files }}"
         ignore_errors: yes
 
       - name: Copy vpn config files to local machine (mobileconfig)
         fetch:
           src: "{{ tmp_vpn_confs_dir }}/{{ mobileconfig_file }}"
           dest: "./{{ mobileconfig_file }}"
-          flat: yes
+          flat: "{{ flat_retrieve_files }}"
         ignore_errors: yes
 
       - name: Remove temporary directory for vpn config files
